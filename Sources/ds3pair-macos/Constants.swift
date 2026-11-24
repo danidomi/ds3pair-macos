@@ -6,6 +6,8 @@ enum DS3Constants {
     static let ds3PID: Int = 0x0268
     static let pairingReportID: UInt8 = 0xF5
     static let pairingReportSize = 64
+    /// Feature report holding the controller's own Bluetooth address.
+    static let controllerInfoReportID: UInt8 = 0xF2
     static let inputReportID: UInt8 = 0x01
     static let inputReportSize = 49
 

@@ -77,6 +77,24 @@ ds3pair-macos monitor
 The key write is report `0xF5` (via IOHID feature reports), the same technique
 as the classic Linux `sixpair` utility.
 
+The controller's **own** Bluetooth address is read from feature report `0xF2`
+(bytes 4–9). Older versions read it from `0xF5`, which only holds the paired
+host's address, so genuine controllers showed `00:00:00:00:00:00` and the
+wireless handshake paged a device that doesn't exist.
+
+### Findings on modern macOS (tested on macOS 27, Apple Silicon, genuine DS3)
+
+- Writing the Mac's address over USB works.
+- Mac-initiated pairing fails with HCI error `0x04` (Page Timeout): a DS3
+  never accepts incoming connections, it always connects *to* its stored host.
+- When the DS3 connects to the Mac, macOS drops it before any app sees it:
+  `IOBluetoothL2CAPChannel` listeners on the HID PSMs (`0x11`, `0x13`) receive
+  nothing. macOS 12+ requires authenticated/encrypted links for Bluetooth HID
+  and the DS3 doesn't do that.
+- Conclusion: wireless DS3 on modern macOS needs a separate USB Bluetooth
+  adapter driven by its own stack (e.g. [DS3Bridge](https://github.com/comechejlg/DS3Bridge)).
+  Over USB, reading feature report `0xF2` activates the controller.
+
 ## Pairing with a pre-shared link key
 
 The controller's pairing report also stores a 16-byte **Bluetooth link key**

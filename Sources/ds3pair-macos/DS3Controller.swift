@@ -194,9 +194,40 @@ class DS3Controller: @unchecked Sendable {
         return BTAddress.fromReportBytes(Array(report[2...7]))
     }
 
+    /// Reads an arbitrary feature report from the controller.
+    func readFeatureReport(id: UInt8, size: Int = 64) throws -> [UInt8] {
+        guard let device = device else { throw DS3Error.deviceNotFound }
+
+        var report = [UInt8](repeating: 0, count: size)
+        report[0] = id
+        var length = report.count
+
+        let result = IOHIDDeviceGetReport(
+            device,
+            kIOHIDReportTypeFeature,
+            CFIndex(id),
+            &report,
+            &length
+        )
+
+        guard result == kIOReturnSuccess else {
+            throw DS3Error.reportReadFailed(result)
+        }
+
+        return report
+    }
+
+    /// The controller's own Bluetooth address.
+    ///
+    /// It lives in feature report 0xF2 (bytes 4...9), not in the 0xF5
+    /// pairing report, which only holds the paired host's address. Reading
+    /// it from 0xF5 returned 00:00:00:00:00:00 on genuine controllers, so
+    /// the wireless handshake paged a non-existent device.
+    /// Reading 0xF2 is also what activates the controller over USB.
     func controllerAddress() throws -> BTAddress {
-        let report = try readPairingReport()
-        return BTAddress.fromReportBytes(Array(report[8...13]))
+        let report = try readFeatureReport(id: DS3Constants.controllerInfoReportID)
+        // Unlike the host address in 0xF5, these bytes are already in display order.
+        return BTAddress(bytes: Array(report[4...9]))
     }
 
     /// The stored Bluetooth link key (16 bytes) read from the pairing report.
